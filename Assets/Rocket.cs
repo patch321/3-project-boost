@@ -19,6 +19,7 @@ public class Rocket : MonoBehaviour {
     [SerializeField] ParticleSystem mainEngineParticles;
     [SerializeField] ParticleSystem successParticles;
     [SerializeField] ParticleSystem deathParticles;
+    bool collisionsDisabled = false;
 
     enum State { Alive, Dying, Trancending}
 
@@ -32,18 +33,34 @@ public class Rocket : MonoBehaviour {
 	}
 
     // Update is called once per frame
-    void Update () 
+    void Update ()
     {
         if (state == State.Alive)
         {
             RespondToThrustInput();
             RespondToRotateInput();
         }
+        if(Debug.isDebugBuild)
+        {
+            RespondToDebugKeys();
+        }
+    }
+
+    private void RespondToDebugKeys()
+    {
+        if (Input.GetKeyDown(KeyCode.L))
+        {
+            LoadNextLevel();
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            collisionsDisabled = !collisionsDisabled;
+        }
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (state != State.Alive) { return; }
+        if (state != State.Alive || collisionsDisabled) { return; }
 
         switch(collision.gameObject.tag){
             case "Friendly":
@@ -73,6 +90,7 @@ public class Rocket : MonoBehaviour {
     {
         state = State.Trancending;
         audioSource.Stop();
+        mainEngineParticles.Stop();
         audioSource.PlayOneShot(success);
         successParticles.Play();
         Invoke("LoadNextLevel", levelLoadDelay);
@@ -80,7 +98,13 @@ public class Rocket : MonoBehaviour {
 
     private void LoadNextLevel()
     {
-        SceneManager.LoadScene(1);
+        int activeSceneIndex = SceneManager.GetActiveScene().buildIndex;
+        int nextSceneIndex = activeSceneIndex + 1;
+        if(nextSceneIndex == SceneManager.sceneCountInBuildSettings)
+        {
+            nextSceneIndex = 0; // loop back to level 1
+        }
+        SceneManager.LoadScene(nextSceneIndex);
     }
 
     private void LoadFirstLevel()
